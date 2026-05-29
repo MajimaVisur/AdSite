@@ -36,6 +36,32 @@ export async function initDatabase() {
     )
   `;
 
+  await db`
+    CREATE TABLE IF NOT EXISTS posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      price REAL,
+      image_url TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `;
+
+  await db`
+    CREATE TABLE IF NOT EXISTS favorites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      post_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, post_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+    )
+  `;
+
 
 
   const userCount = await db`SELECT COUNT(*) AS count FROM users`;
@@ -105,10 +131,9 @@ export async function getUserFromToken(token: string | null): Promise<AuthUser |
 export function sanitizeUser(user: AuthUser) {
   return {
     id: user.id,
-    name: user.name,
+    username: user.name,
     email: user.email,
-    role: user.role,
-    isBlocked: !!user.is_blocked,
+    is_admin: user.role === "admin",
   };
 }
 

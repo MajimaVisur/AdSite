@@ -1,6 +1,7 @@
 import "./index.css";
 
-import { AuthPage } from "./pages/AuthPage";
+import { AuthPage } from "./pages/authPage.tsx";
+import { MainPage } from "./pages/mainPage.tsx";
 import { useAdvertisementApp } from "./api/useAdvertisementApp.ts";
 
 export function App() {
@@ -39,37 +40,34 @@ export function App() {
   }
 
   return (
-    <div className="page">
-      <header className="header">
-        <div>
-          <h1>Welcome to advertisements inc.</h1>
-          <p>Please do not post any inappropriate content.</p>
-        </div>
-        <div className="header-actions">
-          <button className="btn btn-danger" onClick={() => actions.submitLogout()} type="button">
-            Logout ({state.user?.name})
-          </button>
-        </div>
-      </header>
-
-      {state.message ? <div className="notice success">{state.message}</div> : null}
-      {state.error ? <div className="notice error">{state.error}</div> : null}
-
-      <main className="panel">
-        <section className="card">
-          <h2>Welcome, {state.user?.name}!</h2>
-          <p>You have successfully logged in.</p>
-          <div className="form-group">
-            <label>Email:</label>
-            <p>{state.user?.email}</p>
-          </div>
-          <div className="form-group">
-            <label>User Role:</label>
-            <p>{state.user?.role === 'admin' ? 'Administrator' : 'Regular User'}</p>
-          </div>
-        </section>
-      </main>
-    </div>
+    <MainPage
+      user={state.user}
+      posts={state.posts}
+      userPosts={state.userPosts}
+      favoritedPosts={state.favoritedPosts}
+      favoriteSet={state.favoriteSet}
+      currentTab={state.currentTab}
+      message={state.message}
+      error={state.error}
+      showCreateForm={state.showCreateForm}
+      newPostTitle={state.newPostTitle}
+      newPostDescription={state.newPostDescription}
+      newPostPrice={state.newPostPrice}
+      newPostImageUrl={state.newPostImageUrl}
+      editingPostId={state.editingPostId}
+      onSetCurrentTab={actions.setCurrentTab}
+      onSetShowCreateForm={actions.setShowCreateForm}
+      onSetNewPostTitle={actions.setNewPostTitle}
+      onSetNewPostDescription={actions.setNewPostDescription}
+      onSetNewPostPrice={actions.setNewPostPrice}
+      onSetNewPostImageUrl={actions.setNewPostImageUrl}
+      onSetEditingPostId={actions.setEditingPostId}
+      onSetNewPostData={() => {}}
+      onSubmitCreatePost={actions.submitCreatePost}
+      onSubmitDeletePost={actions.submitDeletePost}
+      onSubmitFavoritePost={actions.submitFavoritePost}
+      onSubmitLogout={actions.submitLogout}
+    />
   );
 }
 

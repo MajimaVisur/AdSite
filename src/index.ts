@@ -156,6 +156,202 @@ const server = serve({
       },
     },
 
+    "/api/posts": {
+      async GET(req) {
+        const url = new URL(req.url);
+        const page = Number(url.searchParams.get("page") || "1");
+        const limit = Number(url.searchParams.get("limit") || "20");
+        const offset = (page - 1) * limit;
+
+        const posts = await db`
+          SELECT id, user_id, title, description, price, image_url, created_at, updated_at 
+          FROM posts 
+          ORDER BY created_at DESC 
+          LIMIT ${limit} OFFSET ${offset}
+        `;
+        return json({ posts });
+      },
+
+      async POST(req) {
+        const auth = await requireAuth(req);
+        if (auth.error) {
+          return auth.error;
+        }
+
+        const body = await readJson(req);
+        if (!body) {
+          return json({ error: "Invalid JSON payload" }, 400);
+        }
+
+        const title = String(body.title || "").trim();
+        const description = String(body.description || "").trim() || null;
+        const price = body.price ? Number(body.price) : null;
+        const image_url = String(body.image_url || "").trim() || null;
+
+        if (!title) {
+          return json({ error: "Title is required" }, 400);
+        }
+
+        await db`
+          INSERT INTO posts ${sql({
+            user_id: auth.user!.id,
+            title,
+            description,
+            price,
+            image_url,
+          })}
+        `;
+
+        const posts = await db`SELECT id, user_id, title, description, price, image_url, created_at, updated_at FROM posts WHERE id = last_insert_rowid()`;
+        return json({ post: posts[0] }, 201);
+      },
+    },
+
+    "/api/posts/*": async (req: Request) => {
+      const url = new URL(req.url);
+      const pathname = url.pathname;
+
+      const idMatch = pathname.match(/^\/api\/posts\/(\d+)$/);
+      if (idMatch) {
+        const postId = Number(idMatch[1]);
+
+        if (req.method === "GET") {
+          const posts = await db`
+            SELECT id, user_id, title, description, price, image_url, created_at, updated_at 
+            FROM posts 
+            WHERE id = ${postId}
+          `;
+
+          if (posts.length === 0) {
+            return json({ error: "Post not found" }, 404);
+          }
+
+          const post = posts[0] as any;
+          const auth = await getAuthUser(req);
+          let favorited = false;
+
+          if (auth) {
+            const fav = await db`
+              SELECT COUNT(*) as count FROM favorites 
+              WHERE user_id = ${auth.id} AND post_id = ${postId}
+            `;
+            favorited = (fav[0] as any).count > 0;
+          }
+
+          return json({ post: { ...post, favorited } });
+        }
+
+        if (req.method === "PUT") {
+          const auth = await requireAuth(req);
+          if (auth.error) {
+            return auth.error;
+          }
+
+          const posts = await db`SELECT user_id FROM posts WHERE id = ${postId}`;
+          if (posts.length === 0) {
+            return json({ error: "Post not found" }, 404);
+          }
+
+          if ((posts[0] as any).user_id !== auth.user!.id) {
+            return json({ error: "Forbidden" }, 403);
+          }
+
+          const body = await readJson(req);
+          if (!body) {
+            return json({ error: "Invalid JSON payload" }, 400);
+          }
+
+          const updated_at = new Date().toISOString();
+          const updates: any = {};
+
+          if (body.title !== undefined) {
+            updates.title = String(body.title || "").trim();
+          }
+          if (body.description !== undefined) {
+            updates.description = String(body.description || "").trim() || null;
+          }
+          if (body.price !== undefined) {
+            updates.price = body.price ? Number(body.price) : null;
+          }
+          if (body.image_url !== undefined) {
+            updates.image_url = String(body.image_url || "").trim() || null;
+          }
+
+          updates.updated_at = updated_at;
+
+          await db`UPDATE posts SET ${sql(updates)} WHERE id = ${postId}`;
+
+          const updated = await db`SELECT id, user_id, title, description, price, image_url, created_at, updated_at FROM posts WHERE id = ${postId}`;
+          return json({ post: updated[0] });
+        }
+
+        if (req.method === "DELETE") {
+          const auth = await requireAuth(req);
+          if (auth.error) {
+            return auth.error;
+          }
+
+          const posts = await db`SELECT user_id FROM posts WHERE id = ${postId}`;
+          if (posts.length === 0) {
+            return json({ error: "Post not found" }, 404);
+          }
+
+          if ((posts[0] as any).user_id !== auth.user!.id) {
+            return json({ error: "Forbidden" }, 403);
+          }
+
+          await db`DELETE FROM posts WHERE id = ${postId}`;
+          return json({ success: true });
+        }
+      }
+
+      const favMatch = pathname.match(/^\/api\/posts\/(\d+)\/favorite$/);
+      if (favMatch) {
+        const postId = Number(favMatch[1]);
+
+        if (req.method === "POST") {
+          const auth = await requireAuth(req);
+          if (auth.error) {
+            return auth.error;
+          }
+
+          const posts = await db`SELECT id FROM posts WHERE id = ${postId}`;
+          if (posts.length === 0) {
+            return json({ error: "Post not found" }, 404);
+          }
+
+          const existing = await db`
+            SELECT COUNT(*) as count FROM favorites 
+            WHERE user_id = ${auth.user!.id} AND post_id = ${postId}
+          `;
+
+          if ((existing[0] as any).count > 0) {
+            return json({ error: "Already favorited" }, 400);
+          }
+
+          await db`
+            INSERT INTO favorites ${sql({
+              user_id: auth.user!.id,
+              post_id: postId,
+            })}
+          `;
+          return json({ success: true });
+        }
+
+        if (req.method === "DELETE") {
+          const auth = await requireAuth(req);
+          if (auth.error) {
+            return auth.error;
+          }
+
+          await db`DELETE FROM favorites WHERE user_id = ${auth.user!.id} AND post_id = ${postId}`;
+          return json({ success: true });
+        }
+      }
+
+      return json({ error: "Not found" }, 404);
+    },
+
 
 
     "/*": index,

@@ -1,9 +1,23 @@
-export type UserRole = "admin" | "user";
-
 export type User = {
   id: number;
-  name: string;
+  username: string;
   email: string;
-  role: UserRole;
-  isBlocked: boolean;
+  is_admin: boolean;
+};
+
+export type Post = {
+  id: number;
+  user_id: number;
+  category_id?: number;
+  title: string;
+  description?: string;
+  price?: number;
+  image_url?: string;
+  is_blocked?: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PostDetail = Post & {
+  favorited: boolean;
 };
