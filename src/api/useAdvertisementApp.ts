@@ -112,9 +112,6 @@ export function useAdvertisementApp() {
     try {
       await logout(token);
     } catch {
-      // Local logout should still continue if API request fails.
-    }
-
     storeToken(null);
     setUser(null);
     setPosts([]);
@@ -241,4 +238,4 @@ export function useAdvertisementApp() {
       submitFavoritePost,
     },
   };
-}
+}}

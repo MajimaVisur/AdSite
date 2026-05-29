@@ -17,7 +17,6 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, tok
   return payload;
 }
 
-// ===== AUTH =====
 export function register(username: string, email: string, password: string) {
   return apiRequest<{ token: string; user: User }>(
     "/api/auth/register",
@@ -95,7 +94,6 @@ export function deletePost(id: number, token?: string) {
   return apiRequest<{ success: boolean }>(`/api/posts/${id}`, { method: "DELETE" }, token ?? null);
 }
 
-// ===== POSTS FAVORITES =====
 export function addFavorite(postId: number, token: string) {
   return apiRequest<{ success: boolean }>(`/api/posts/${postId}/favorite`, { method: "POST" }, token);
 }
@@ -104,7 +102,6 @@ export function removeFavorite(postId: number, token: string) {
   return apiRequest<{ success: boolean }>(`/api/posts/${postId}/favorite`, { method: "DELETE" }, token);
 }
 
-// ===== USER OPERATIONS =====
 export function getUserInfo(token: string) {
   return apiRequest<{ user: User }>("/api/users/me", { method: "GET" }, token);
 }
